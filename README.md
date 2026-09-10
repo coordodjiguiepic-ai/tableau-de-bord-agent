@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CPS Performance DJIGUI — Système Intégré</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7f5;color:#17362b}
+.app{display:flex;min-height:100vh}
+aside{width:240px;background:#104d39;color:#fff;padding:18px}
+.brand{font-weight:bold;font-size:18px;margin-bottom:25px}
+nav button{display:block;width:100%;padding:11px;margin:3px 0;border:0;border-radius:7px;background:transparent;color:#fff;text-align:left;cursor:pointer}
+nav button.active{background:#23765a}
+main{flex:1;padding:24px}
+.head{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;flex-wrap:wrap;gap:10px}
+h1{margin:0;font-size:24px}
+h2{font-size:17px}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(4,1fr)}
+.card{background:white;border:1px solid #dfe8e3;border-radius:12px;padding:16px}
+.num{font-size:28px;font-weight:bold}
+.good{color:#14845a}
+.bad{color:#c23b32}
+.muted{font-size:12px;color:#718078}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px;border-bottom:1px solid #e5ece8;text-align:left}
+th{font-size:10px;color:#718078;text-transform:uppercase}
+.panel{display:none}
+.active{display:block}
+.notice{padding:11px;background:#edf7f2;border-left:4px solid #16855d;margin-bottom:15px}
+.btn{padding:8px 12px;border:1px solid #d5e0db;background:white;border-radius:7px;cursor:pointer}
+.primary{background:#147c56;color:#fff}
+.form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input,select{padding:8px;border:1px solid #d8e2de;border-radius:7px;box-sizing:border-box}
+input.editable-input{width:65px;padding:4px;text-align:center}
+.filters-bar{display:flex;gap:8px;flex-wrap:wrap;background:white;padding:12px;border-radius:10px;border:1px solid #dfe8e3;margin-bottom:15px;align-items:center}
+.login-box{background:#fff;border:1px solid #dfe8e3;padding:15px;border-radius:10px;margin-bottom:15px;display:flex;gap:15px;align-items:center;flex-wrap:wrap;}
+@media(max-width:750px){aside{width:190px}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<div class="brand">DJIGUI VIH/SIDA<br><small>Oct 2026 — Sep 2027</small></div>
+<nav>
+<button class="active" onclick="show('dash',this)">▣ Tableau de bord</button>
+<button onclick="show('entry',this)">✎ Saisie CPS & Agents</button>
+<button onclick="show('ranking',this)">🏆 Classements</button>
+<button onclick="show('admin',this)">⚙ Matrices Admin</button>
+</nav>
+</aside>
+<main>
+<div class="head">
+  <div>
+    <h1 id="title">Tableau de bord</h1>
+    <span class="muted">Suivi consolidé & Indicateurs opérationnels</span>
+  </div>
+  <div>
+    <button class="btn primary" onclick="exportExcel()">📥 Exporter vers Excel</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<section id="dash" class="panel active">
+<div class="filters-bar">
+  <div>
+    <label class="muted">Fréquence d'affichage</label>
+    <select id="timeFilterType" onchange="toggleTimeSelectors(); updateAll();" style="font-weight:bold;">
+      <option value="month">Mensuel (Mois)</option>
+      <option value="week">Hebdomadaire (Semaine)</option>
+      <option value="quarter">Trimestriel</option>
+      <option value="semester">Semestriel</option>
+      <option value="year">Annuel (12 Mois)</option>
+    </select>
+  </div>
+  <div id="selectorContainer">
+    <label class="muted">Période</label>
+    <select id="periodValueSelect" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;"></select>
+  </div>
+  <div>
+    <label class="muted">Filtrer par CPS</label>
+    <select id="siteSelect" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;">
+      <option value="CONSOLIDE">-- Tous les CPS (Consolidé) --</option>
+    </select>
+  </div>
+</div>
+
+<div class="notice"><b>Visibilité publique :</b> Le tableau reste intact, visible et filtrable pour tous les utilisateurs.</div>
+
+<div class="grid kpis">
+  <div class="card"><div class="muted">Taux global</div><div id="kpiGlobalRate" class="num good">0%</div></div>
+  <div class="card"><div class="muted">Cible totale</div><div id="kpiTarget" class="num">0</div></div>
+  <div class="card"><div class="muted">Réalisation</div><div id="kpiRealized" class="num">0</div></div>
+  <div class="card"><div class="muted">GAP restant</div><div id="kpiGap" class="num bad">0</div></div>
+</div><br>
+
+<div class="card" style="margin-bottom:20px;">
+  <h2>Performance CPS (Indicateurs Cliniques/Communautaires)</h2>
+  <table>
+    <thead><tr><th>Indicateur</th><th>Cible Période</th><th>Réalisé Période</th><th>GAP</th><th>Taux</th></tr></thead>
+    <tbody id="dashTableBody"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+    <h2>Performance Agents de Saisie (Indicateurs Spécifiques)</h2>
+    <div>
+      <label class="muted">Filtrer Agent de Saisie :</label>
+      <select id="dashAgentFilter" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;">
+        <option value="CONSOLIDE">-- Tous les Agents (Consolidé) --</option>
+      </select>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Indicateur Agent</th><th>Cible Période</th><th>Réalisé Période</th><th>GAP</th><th>Taux</th></tr></thead>
+    <tbody id="dashAgentTableBody"></tbody>
+  </table>
+</div>
+</section>
+
+<!-- SAISIE -->
+<section id="entry" class="panel">
+<div class="login-box">
+  <div>
+    <label class="muted">Filtre 1 : Rôle & Entité</label>
+    <select id="authRole" style="font-weight:bold;" onchange="populateAuthDropdowns(); checkAuth();">
+      <option value="CPS">CPS</option>
+      <option value="ASD">Agent de Saisie (ASD)</option>
+    </select>
+  </div>
+  <div>
+    <label class="muted">Filtre 2 : Site (Implantation)</label>
+    <select id="authSite" style="font-weight:bold;" onchange="populateAuthNames(); checkAuth();">
+      <option value="">-- Choisir un site --</option>
+    </select>
+  </div>
+  <div>
+    <label class="muted">Filtre 3 : Nom (Individuel)</label>
+    <select id="authAgent" style="font-weight:bold;" onchange="checkAuth()">
+      <option value="">-- Choisir un nom --</option>
+    </select>
+  </div>
+  <div id="authStatus" style="font-weight:bold; margin-top:15px;" class="bad">Veuillez configurer les filtres pour débloquer la saisie.</div>
+</div>
+
+<div class="card" id="saisieCard" style="opacity:0.4; pointer-events:none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+    <h2 id="saisieCardTitle">Saisie Hebdomadaire des Réalisations</h2>
+    <div>
+      <label class="muted">Mois de saisie :</label>
+      <select id="entryMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+    </div>
+  </div>
+  <div id="lockNotice" class="notice" style="display:none; background:#fdecea; border-color:#c23b32; color:#c23b32;"><b>Période verrouillée :</b> L'administrateur a verrouillé ce mois. La modification des données est désactivée.</div>
+
+  <div id="saisieCpsContainer">
+    <h3>Indicateurs CPS</h3>
+    <table>
+      <thead><tr><th>Indicateur</th><th>Cible Mensuelle</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>Total</th><th>Taux</th></tr></thead>
+      <tbody id="entryTableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="saisieAgentContainer" style="display:none;">
+    <h3>Indicateurs Agents de Saisie (ASD)</h3>
+    <table>
+      <thead><tr><th>Indicateur Agent</th><th>Cible Mensuelle</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>Total</th><th>Taux</th></tr></thead>
+      <tbody id="entryAgentTableBody"></tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- CLASSEMENTS -->
+<section id="ranking" class="panel">
+<div class="card" style="margin-bottom:20px; background:#fafcfb;">
+  <h2>Paramètres Globaux du Classement</h2>
+  <div class="form" style="margin-top:10px;">
+    <div>
+      <label class="muted">Pourcentage de référence cible (%)</label>
+      <input type="number" id="globalRefPercentage" value="80" min="0" max="100" onchange="updateAll()" style="width:80px; font-weight:bold;">
+    </div>
+    <div>
+      <label class="muted">Mois de Notation Administrative à afficher</label>
+      <select id="rankingMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+    </div>
+  </div>
+</div>
+
+<div class="grid" style="gap:20px;">
+  <div class="card">
+    <h2>Classement des CPS</h2>
+    <p class="muted">Basé sur le nombre d'indicateurs atteints par rapport au pourcentage de référence, plus les notes administratives de qualité des données et de suivi.</p>
+    <table>
+      <thead>
+        <tr><th>Rang</th><th>CPS</th><th>Indicateurs Atteints</th><th>Qualité Données (-3 à +3)</th><th>Qualité Suivi (-2 à +2)</th><th>Score Total</th></tr>
+      </thead>
+      <tbody id="rankingCpsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Classement des Agents de Saisie (ASD)</h2>
+    <p class="muted">Basé sur l'atteinte des indicateurs spécifiques par rapport au pourcentage de référence et la notation administrative.</p>
+    <table>
+      <thead>
+        <tr><th>Rang</th><th>Agent (ASD)</th><th>Site Rattachement</th><th>Indicateurs Atteints</th><th>Qualité Données (-3 à +3)</th><th>Qualité Suivi (-2 à +2)</th><th>Score Total</th></tr>
+      </thead>
+      <tbody id="rankingAgentsBody"></tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- ADMIN -->
+<section id="admin" class="panel">
+<div class="grid" style="gap:20px;">
+  
+  <div class="card">
+    <h2>1. Matrice Cibles CPS & Association des Agents</h2>
+    <table>
+      <thead><tr id="matrixCpsHeader"><th>CPS</th><th>Agent Associé</th></tr></thead>
+      <tbody id="matrixCpsBody"></tbody>
+    </table><br>
+    <div class="form">
+      <input type="text" id="newCpsName" placeholder="Nom du CPS">
+      <input type="text" id="newCpsAgent" placeholder="Agent responsable">
+      <button class="btn primary" onclick="addCps()">Ajouter CPS</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Matrice Cibles Agents de Saisie (ASD)</h2>
+    <table>
+      <thead><tr id="matrixAgentHeader"><th>Agent de Saisie</th><th>Site Affecté</th></tr></thead>
+      <tbody id="matrixAgentBody"></tbody>
+    </table><br>
+    <div class="form">
+      <input type="text" id="newAgentNameInput" placeholder="Nom de l'agent">
+      <input type="text" id="newAgentSiteInput" placeholder="Site assigné">
+      <button class="btn primary" onclick="addAgentEntry()">Ajouter Agent</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Gestion des Indicateurs (Matrice Admin Séparée)</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div>
+        <h3>Indicateurs Modifiables CPS</h3>
+        <table>
+          <thead><tr><th>Code</th><th>Libellé</th><th>Action</th></tr></thead>
+          <tbody id="adminIndCpsBody"></tbody>
+        </table><br>
+        <div class="form">
+          <input type="text" id="indCpsCode" placeholder="Code">
+          <input type="text" id="indCpsLabel" placeholder="Libellé">
+          <button class="btn primary" onclick="addIndCps()">Ajouter CPS</button>
+        </div>
+      </div>
+      <div>
+        <h3>Indicateurs Modifiables Agents de Saisie (ASD)</h3>
+        <table>
+          <thead><tr><th>Code</th><th>Libellé</th><th>Action</th></tr></thead>
+          <tbody id="adminIndAgentBody"></tbody>
+        </table><br>
+        <div class="form">
+          <input type="text" id="indAgentCode" placeholder="Code">
+          <input type="text" id="indAgentLabel" placeholder="Libellé">
+          <button class="btn primary" onclick="addIndAgent()">Ajouter ASD</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Verrouillage des Périodes de Saisie</h2>
+    <p class="muted">Sélectionnez les mois à verrouiller pour empêcher toute modification par les agents après la date limite.</p>
+    <table>
+      <thead><tr><th>Mois</th><th>Statut Actuel</th><th>Action Admin</th></tr></thead>
+      <tbody id="adminLockBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>5. Notation Administrative (Mensuelle)</h2>
+    <div class="form" style="margin-bottom:15px;">
+      <div>
+        <label class="muted">Mois de notation :</label>
+        <select id="adminNoteMonthSelect" onchange="renderAdminMatrices()" style="font-weight:bold;"></select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Entité / Nom</th><th>Type</th><th>Qualité Données (-3 à +3)</th><th>Qualité Suivi (-2 à +2)</th></tr></thead>
+      <tbody id="adminNotesBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>6. Historique des Modifications (Audit Trail - Cibles)</h2>
+    <p class="muted">Trace des modifications de cibles effectuées par l'administrateur dans la matrice.</p>
+    <table>
+      <thead><tr><th>Date & Heure</th><th>Cible / Élément</th><th>Indicateur</th><th>Ancienne Valeur</th><th>Nouvelle Valeur</th></tr></thead>
+      <tbody id="auditTrailBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</section>
+
+</main>
+</div>
+
+<script>
+// URL de votre Google Apps Script (À remplacer par l'URL obtenue lors du déploiement)
+const GOOGLE_SHEET_API_URL = 'COLLEZ_ICI_VOTRE_URL_GOOGLE_APPS_SCRIPT';
+
+function syncWithGoogleSheet(payload) {
+  if (GOOGLE_SHEET_API_URL.includes('COLLEZ_ICI')) return; // Ignore si l'URL n'est pas encore configurée
+  fetch(GOOGLE_SHEET_API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(err => console.error('Erreur de synchronisation Google Sheets:', err));
+}
+
+// Listes de base
+let structures = [
+  { name: "BOUGOUNI 1", agent: "Kévin Medje" },
+  { name: "BOUGOUNI 2", agent: "Agent Alpha" },
+  { name: "MANANKORO", agent: "Agent Beta" },
+  { name: "YANFOLILA", agent: "Agent Gamma" }
+];
+
+let agentsSaisieList = [
+  { name: "Agent Saisie 1", site: "BOUGOUNI 1" },
+  { name: "Agent Saisie 2", site: "MANANKORO" },
+  { name: "Agent Saisie 3", site: "YANFOLILA" }
+];
+
+let indicatorsCps = [
+  { code: "HTS_SELF", label: "Kit distribué (HTS_SELF)" },
+  { code: "VL_Supp", label: "Suppression charge virale" }
+];
+
+let indicatorsAgent = [
+  { code: "CV_DOC", label: "Résultats CV documentés" },
+  { code: "PDV_RET", label: "Perdus de vue retrouvés" },
+  { code: "DIST_COMM", label: "Distribution communautaire" }
+];
+
+const monthsList = [
+  "2026-10","2026-11","2026-12",
+  "2027-01","2027-02","2027-03",
+  "2027-04","2027-05","2027-06",
+  "2027-07","2027-08","2027-09"
+];
+
+// Base de données structurée avec réalisations initiales à 0
+let database = {
+  cps: {},   // [site][mois][code] = { target, s1, s2, s3, s4 }
+  agents: {}, // [agentName][mois][code] = { target, s1, s2, s3, s4 }
+  evals: {},  // [entityName][mois] = { dataQuality: 0, trackingQuality: 0 }
+  locks: {},  // [mois] = boolean (true = locked)
+  audit: []   // [{timestamp, targetName, indicator, oldVal, newVal}]
+};
+
+function initDB() {
+  monthsList.forEach(m => {
+    database.locks[m] = false;
+    structures.forEach(st => {
+      if(!database.cps[st.name]) database.cps[st.name] = {};
+      if(!database.cps[st.name][m]) database.cps[st.name][m] = {};
+      if(!database.evals[st.name]) database.evals[st.name] = {};
+      if(!database.evals[st.name][m]) database.evals[st.name][m] = { dataQuality: 0, trackingQuality: 0 };
+      
+      indicatorsCps.forEach(ind => {
+        if(!database.cps[st.name][m][ind.code]) {
+          database.cps[st.name][m][ind.code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 };
+        }
+      });
+    });
+
+    agentsSaisieList.forEach(ag => {
+      if(!database.agents[ag.name]) database.agents[ag.name] = {};
+      if(!database.agents[ag.name][m]) database.agents[ag.name][m] = {};
+      if(!database.evals[ag.name]) database.evals[ag.name] = {};
+      if(!database.evals[ag.name][m]) database.evals[ag.name][m] = { dataQuality: 0, trackingQuality: 0 };
+
+      indicatorsAgent.forEach(ind => {
+        if(!database.agents[ag.name][m][ind.code]) {
+          database.agents[ag.name][m][ind.code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 };
+        }
+      });
+    });
+  });
+}
+initDB();
+
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('title').textContent = btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/, '').trim();
+  updateAll();
+}
+
+function populateDropdowns() {
+  // Filtre Dashboard Site CPS
+  let siteSelect = document.getElementById('siteSelect');
+  let curSite = siteSelect.value;
+  let html = '<option value="CONSOLIDE">-- Tous les CPS (Consolidé) --</option>';
+  structures.forEach(s => { html += `<option value="${s.name}">CPS ${s.name}</option>`; });
+  siteSelect.innerHTML = html;
+  siteSelect.value = curSite;
+
+  // Filtre Dashboard Agent de Saisie
+  let dashAgentFilter = document.getElementById('dashAgentFilter');
+  let curDashAgent = dashAgentFilter.value;
+  let aHtml = '<option value="CONSOLIDE">-- Tous les Agents (Consolidé) --</option>';
+  agentsSaisieList.forEach(ag => { aHtml += `<option value="${ag.name}">${ag.name} (${ag.site})</option>`; });
+  dashAgentFilter.innerHTML = aHtml;
+  dashAgentFilter.value = curDashAgent;
+
+  // Mois de saisie & classements
+  let entryMonthSelect = document.getElementById('entryMonthSelect');
+  let curMonth = entryMonthSelect.value;
+  let mHtml = '';
+  monthsList.forEach(m => { mHtml += `<option value="${m}">${m}</option>`; });
+  entryMonthSelect.innerHTML = mHtml;
+  if(curMonth) entryMonthSelect.value = curMonth;
+
+  let rankingMonthSelect = document.getElementById('rankingMonthSelect');
+  let curRankMonth = rankingMonthSelect.value;
+  rankingMonthSelect.innerHTML = mHtml;
+  if(curRankMonth) rankingMonthSelect.value = curRankMonth;
+
+  let adminNoteMonthSelect = document.getElementById('adminNoteMonthSelect');
+  let curAdminMonth = adminNoteMonthSelect.value;
+  adminNoteMonthSelect.innerHTML = mHtml;
+  if(curAdminMonth) adminNoteMonthSelect.value = curAdminMonth;
+}
+
+function populateAuthDropdowns() {
+  let role = document.getElementById('authRole').value;
+  let authSite = document.getElementById('authSite');
+  let curAuthSite = authSite.value;
+  let sHtml = '<option value="">-- Choisir un site --</option>';
+  
+  if(role === 'CPS') {
+    structures.forEach(s => { sHtml += `<option value="${s.name}">${s.name}</option>`; });
+  } else {
+    agentsSaisieList.forEach(ag => { if(!sHtml.includes(ag.site)) sHtml += `<option value="${ag.site}">${ag.site}</option>`; });
+  }
+  authSite.innerHTML = sHtml;
+  authSite.value = curAuthSite;
+  populateAuthNames();
+}
+
+function populateAuthNames() {
+  let role = document.getElementById('authRole').value;
+  let site = document.getElementById('authSite').value;
+  let authAgent = document.getElementById('authAgent');
+  let curAuthAgent = authAgent.value;
+  let aHtml = '<option value="">-- Choisir un nom --</option>';
+
+  if(role === 'CPS') {
+    structures.forEach(s => {
+      if(!site || s.name === site) aHtml += `<option value="${s.agent}">${s.agent}</option>`;
+    });
+  } else {
+    agentsSaisieList.forEach(ag => {
+      if(!site || ag.site === site) aHtml += `<option value="${ag.name}">${ag.name}</option>`;
+    });
+  }
+  authAgent.innerHTML = aHtml;
+  authAgent.value = curAuthAgent;
+  checkAuth();
+}
+
+function checkAuth() {
+  let role = document.getElementById('authRole').value;
+  let site = document.getElementById('authSite').value;
+  let agent = document.getElementById('authAgent').value;
+  let status = document.getElementById('authStatus');
+  let card = document.getElementById('saisieCard');
+  let entryMonth = document.getElementById('entryMonthSelect').value;
+
+  if(!site || !agent) {
+    status.className = "bad";
+    status.textContent = "Veuillez configurer l'ensemble des filtres d'accès.";
+    card.style.opacity = "0.4";
+    card.style.pointerEvents = "none";
+    return;
+  }
+
+  let isValid = false;
+  if(role === 'CPS') {
+    let found = structures.find(s => s.name === site && s.agent === agent);
+    if(found) isValid = true;
+  } else {
+    let found = agentsSaisieList.find(ag => ag.site === site && ag.name === agent);
+    if(found) isValid = true;
+  }
+
+  if(isValid) {
+    status.className = "good";
+    status.textContent = `Accès autorisé (${role}) pour ${agent} sur ${site}.`;
+    card.style.opacity = "1";
+    card.style.pointerEvents = "auto";
+    
+    // Affichage conditionnel des conteneurs de saisie
+    if(role === 'CPS') {
+      document.getElementById('saisieCardTitle').textContent = `Saisie CPS : ${site} (${agent})`;
+      document.getElementById('saisieCpsContainer').style.display = 'block';
+      document.getElementById('saisieAgentContainer').style.display = 'none';
+    } else {
+      document.getElementById('saisieCardTitle').textContent = `Saisie Agent de Saisie : ${agent} (${site})`;
+      document.getElementById('saisieCpsContainer').style.display = 'none';
+      document.getElementById('saisieAgentContainer').style.display = 'block';
+    }
+
+    // Gestion du verrouillage de période
+    let isLocked = database.locks[entryMonth];
+    let lockNotice = document.getElementById('lockNotice');
+    if(isLocked) {
+      lockNotice.style.display = 'block';
+      card.querySelectorAll('input').forEach(inp => inp.disabled = true);
+    } else {
+      lockNotice.style.display = 'none';
+      card.querySelectorAll('input').forEach(inp => inp.disabled = false);
+    }
+
+  } else {
+    status.className = "bad";
+    status.textContent = "Accès refusé : Le nom choisi n'est pas attribué à ce site pour ce profil.";
+    card.style.opacity = "0.4";
+    card.style.pointerEvents = "none";
+  }
+}
+
+function toggleTimeSelectors() {
+  let type = document.getElementById('timeFilterType').value;
+  let sel = document.getElementById('periodValueSelect');
+  let html = '';
+  if(type === 'month') {
+    monthsList.forEach(m => { html += `<option value="${m}">Mois : ${m}</option>`; });
+  } else if(type === 'week') {
+    monthsList.forEach(m => {
+      ['S1','S2','S3','S4'].forEach(w => { html += `<option value="${m}_${w}">${m} - Semaine ${w}</option>`; });
+    });
+  } else if(type === 'quarter') {
+    html += `<option value="Q1">Q1 (Oct-Déc 2026)</option><option value="Q2">Q2 (Jan-Mar 2027)</option><option value="Q3">Q3 (Avr-Juin 2027)</option><option value="Q4">Q4 (Juil-Sep 2027)</option>`;
+  } else if(type === 'semester') {
+    html += `<option value="S1_FY">S1 (Oct 2026 - Mars 2027)</option><option value="S2_FY">S2 (Avr 2027 - Sep 2027)</option>`;
+  } else if(type === 'year') {
+    html += `<option value="FULL_YEAR">Année Complète</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+function updateAll() {
+  populateDropdowns();
+  if(document.getElementById('authSite').options.length <= 1) populateAuthDropdowns();
+  if(document.getElementById('periodValueSelect').options.length === 0) toggleTimeSelectors();
+
+  let filterType = document.getElementById('timeFilterType').value;
+  let periodVal = document.getElementById('periodValueSelect').value;
+  let currentSite = document.getElementById('siteSelect').value;
+  let currentAgentFilter = document.getElementById('dashAgentFilter').value;
+  let entryMonth = document.getElementById('entryMonthSelect').value;
+
+  let targetMonths = [];
+  if(filterType === 'month') targetMonths = [periodVal];
+  else if(filterType === 'week') targetMonths = [periodVal.substring(0, 7)];
+  else if(filterType === 'quarter') {
+    if(periodVal === 'Q1') targetMonths = ["2026-10","2026-11","2026-12"];
+    if(periodVal === 'Q2') targetMonths = ["2027-01","2027-02","2027-03"];
+    if(periodVal === 'Q3') targetMonths = ["2027-04","2027-05","2027-06"];
+    if(periodVal === 'Q4') targetMonths = ["2027-07","2027-08","2027-09"];
+  } else if(filterType === 'semester') {
+    if(periodVal === 'S1_FY') targetMonths = ["2026-10","2026-11","2026-12","2027-01","2027-02","2027-03"];
+    if(periodVal === 'S2_FY') targetMonths = ["2027-04","2027-05","2027-06","2027-07","2027-08","2027-09"];
+  } else if(filterType === 'year') targetMonths = monthsList;
+
+  let sitesToProcess = (currentSite === "CONSOLIDE") ? structures.map(s => s.name) : [currentSite];
+
+  // Aggrégation CPS
+  let aggCps = {};
+  indicatorsCps.forEach(ind => { aggCps[ind.code] = { label: ind.label, target: 0, realized: 0 }; });
+
+  sitesToProcess.forEach(siteName => {
+    if(!database.cps[siteName]) return;
+    targetMonths.forEach(m => {
+      if(database.cps[siteName][m]) {
+        let mData = database.cps[siteName][m];
+        for(let code in mData) {
+          if(aggCps[code]) {
+            let coef = (filterType === 'week') ? 0.25 : 1;
+            aggCps[code].target += (mData[code].target * coef);
+            let wk = mData[code];
+            if(filterType === 'week') {
+              let wkKey = periodVal.split('_')[1].toLowerCase();
+              aggCps[code].realized += (wk[wkKey] || 0);
+            } else {
+              aggCps[code].realized += (wk.s1 + wk.s2 + wk.s3 + wk.s4);
+            }
+          }
+        }
+      }
+    });
+  });
+
+  // Aggrégation Agents avec filtre dédié
+  let aggAgent = {};
+  indicatorsAgent.forEach(ind => { aggAgent[ind.code] = { label: ind.label, target: 0, realized: 0 }; });
+
+  let agentsToProcess = agentsSaisieList.filter(ag => {
+    let matchSite = (currentSite === "CONSOLIDE" || ag.site === currentSite);
+    let matchAgent = (currentAgentFilter === "CONSOLIDE" || ag.name === currentAgentFilter);
+    return matchSite && matchAgent;
+  });
+
+  agentsToProcess.forEach(ag => {
+    if(!database.agents[ag.name]) return;
+    targetMonths.forEach(m => {
+      if(database.agents[ag.name][m]) {
+        let mData = database.agents[ag.name][m];
+        for(let code in mData) {
+          if(aggAgent[code]) {
+            let coef = (filterType === 'week') ? 0.25 : 1;
+            aggAgent[code].target += (mData[code].target * coef);
+            let wk = mData[code];
+            if(filterType === 'week') {
+              let wkKey = periodVal.split('_')[1].toLowerCase();
+              aggAgent[code].realized += (wk[wkKey] || 0);
+            } else {
+              aggAgent[code].realized += (wk.s1 + wk.s2 + wk.s3 + wk.s4);
+            }
+          }
+        }
+      }
+    });
+  });
+
+  // Rendu Dashboard CPS
+  let dashHtml = '', totT = 0, totR = 0;
+  for(let code in aggCps) {
+    let item = aggCps[code];
+    let gap = item.target - item.realized;
+    let rate = item.target > 0 ? Math.round((item.realized / item.target) * 100) : 0;
+    totT += item.target; totR += item.realized;
+    dashHtml += `<tr><td><b>${code}</b><br><span class="muted">${item.label}</span></td><td>${Math.round(item.target)}</td><td>${item.realized}</td><td class="${gap > 0 ? 'bad' : 'good'}">${gap > 0 ? Math.round(gap) : 0}</td><td><b>${rate}%</b></td></tr>`;
+  }
+  document.getElementById('dashTableBody').innerHTML = dashHtml;
+
+  // Rendu Dashboard Agents
+  let agentDashHtml = '';
+  for(let code in aggAgent) {
+    let item = aggAgent[code];
+    let gap = item.target - item.realized;
+    let rate = item.target > 0 ? Math.round((item.realized / item.target) * 100) : 0;
+    totT += item.target; totR += item.realized;
+    agentDashHtml += `<tr><td><b>${code}</b><br><span class="muted">${item.label}</span></td><td>${Math.round(item.target)}</td><td>${item.realized}</td><td class="${gap > 0 ? 'bad' : 'good'}">${gap > 0 ? Math.round(gap) : 0}</td><td><b>${rate}%</b></td></tr>`;
+  }
+  document.getElementById('dashAgentTableBody').innerHTML = agentDashHtml;
+
+  let gGap = totT - totR;
+  let gRate = totT > 0 ? Math.round((totR / totT) * 100) : 0;
+  document.getElementById('kpiGlobalRate').textContent = gRate + '%';
+  document.getElementById('kpiTarget').textContent = Math.round(totT);
+  document.getElementById('kpiRealized').textContent = totR;
+  document.getElementById('kpiGap').textContent = gGap > 0 ? Math.round(gGap) : 0;
+
+  // Rendu Formulaires de Saisie
+  let authRole = document.getElementById('authRole').value;
+  let authSite = document.getElementById('authSite').value;
+  let authAgent = document.getElementById('authAgent').value;
+  let isLocked = database.locks[entryMonth];
+
+  if(authSite && authAgent) {
+    if(authRole === 'CPS' && database.cps[authSite] && database.cps[authSite][entryMonth]) {
+      let cData = database.cps[authSite][entryMonth];
+      let cHtml = '';
+      indicatorsCps.forEach(ind => {
+        let d = cData[ind.code];
+        if(!d) { d = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 }; cData[ind.code] = d; }
+        let r = d.s1 + d.s2 + d.s3 + d.s4;
+        let rate = d.target > 0 ? Math.round((r / d.target) * 100) : 0;
+        cHtml += `<tr><td><b>${ind.code}</b><br><span class="muted">${ind.label}</span></td><td><b>${d.target}</b></td>
+        <td><input type="number" class="editable-input" value="${d.s1}" ${isLocked?'disabled':''} onchange="updateCpsVal('${authSite}','${entryMonth}','${ind.code}','s1',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s2}" ${isLocked?'disabled':''} onchange="updateCpsVal('${authSite}','${entryMonth}','${ind.code}','s2',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s3}" ${isLocked?'disabled':''} onchange="updateCpsVal('${authSite}','${entryMonth}','${ind.code}','s3',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s4}" ${isLocked?'disabled':''} onchange="updateCpsVal('${authSite}','${entryMonth}','${ind.code}','s4',this.value)"></td>
+        <td><b>${r}</b></td><td><span class="${rate >= 100 ? 'good' : 'bad'}">${rate}%</span></td></tr>`;
+      });
+      document.getElementById('entryTableBody').innerHTML = cHtml;
+    } else if(authRole === 'ASD' && database.agents[authAgent] && database.agents[authAgent][entryMonth]) {
+      let agData = database.agents[authAgent][entryMonth];
+      let agHtml = '';
+      indicatorsAgent.forEach(ind => {
+        let d = agData[ind.code];
+        if(!d) { d = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 }; agData[ind.code] = d; }
+        let r = d.s1 + d.s2 + d.s3 + d.s4;
+        let rate = d.target > 0 ? Math.round((r / d.target) * 100) : 0;
+        agHtml += `<tr><td><b>${ind.code}</b><br><span class="muted">${ind.label}</span></td><td><b>${d.target}</b></td>
+        <td><input type="number" class="editable-input" value="${d.s1}" ${isLocked?'disabled':''} onchange="updateAgentVal('${authAgent}','${entryMonth}','${ind.code}','s1',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s2}" ${isLocked?'disabled':''} onchange="updateAgentVal('${authAgent}','${entryMonth}','${ind.code}','s2',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s3}" ${isLocked?'disabled':''} onchange="updateAgentVal('${authAgent}','${entryMonth}','${ind.code}','s3',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${d.s4}" ${isLocked?'disabled':''} onchange="updateAgentVal('${authAgent}','${entryMonth}','${ind.code}','s4',this.value)"></td>
+        <td><b>${r}</b></td><td><span class="${rate >= 100 ? 'good' : 'bad'}">${rate}%</span></td></tr>`;
+      });
+      document.getElementById('entryAgentTableBody').innerHTML = agHtml;
+    }
+  }
+
+  renderRankings();
+  renderAdminMatrices();
+}
+
+function updateCpsVal(site, month, code, wk, val) {
+  let newVal = parseInt(val) || 0;
+  database.cps[site][month][code][wk] = newVal;
+  
+  // Synchronisation automatique vers Google Sheets
+  syncWithGoogleSheet({
+    type: 'CPS',
+    entity: site,
+    month: month,
+    indicator: code,
+    semaine: wk,
+    valeur: newVal,
+    timestamp: new Date().toISOString()
+  });
+
+  updateAll();
+}
+
+function updateAgentVal(agent, month, code, wk, val) {
+  let newVal = parseInt(val) || 0;
+  database.agents[agent][month][code][wk] = newVal;
+
+  // Synchronisation automatique vers Google Sheets
+  syncWithGoogleSheet({
+    type: 'ASD',
+    entity: agent,
+    month: month,
+    indicator: code,
+    semaine: wk,
+    valeur: newVal,
+    timestamp: new Date().toISOString()
+  });
+
+  updateAll();
+}
+
+function renderRankings() {
+  let refPct = parseFloat(document.getElementById('globalRefPercentage').value) || 80;
+  let rankMonth = document.getElementById('rankingMonthSelect').value;
+
+  // Classement CPS
+  let cpsScores = structures.map(st => {
+    let indicatorsReached = 0;
+    if(database.cps[st.name][rankMonth]) {
+      for(let code in database.cps[st.name][rankMonth]) {
+        let d = database.cps[st.name][rankMonth][code];
+        let r = d.s1 + d.s2 + d.s3 + d.s4;
+        let rate = d.target > 0 ? (r / d.target) * 100 : 0;
+        if(rate >= refPct) indicatorsReached += 1;
+      }
+    }
+    let ev = database.evals[st.name] && database.evals[st.name][rankMonth] ? database.evals[st.name][rankMonth] : { dataQuality: 0, trackingQuality: 0 };
+    let totalScore = indicatorsReached + ev.dataQuality + ev.trackingQuality;
+    return { name: st.name, indicatorsReached, dataQuality: ev.dataQuality, trackingQuality: ev.trackingQuality, totalScore };
+  });
+
+  cpsScores.sort((a,b) => b.totalScore - a.totalScore);
+  let cpsRankHtml = '';
+  cpsScores.forEach((item, idx) => {
+    cpsRankHtml += `<tr><td><b>#${idx+1}</b></td><td>${item.name}</td><td><b>${item.indicatorsReached}</b></td><td>${item.dataQuality}</td><td>${item.trackingQuality}</td><td><b>${item.totalScore} pts</b></td></tr>`;
+  });
+  document.getElementById('rankingCpsBody').innerHTML = cpsRankHtml;
+
+  // Classement Agents
+  let agentScores = agentsSaisieList.map(ag => {
+    let indicatorsReached = 0;
+    if(database.agents[ag.name] && database.agents[ag.name][rankMonth]) {
+      for(let code in database.agents[ag.name][rankMonth]) {
+        let d = database.agents[ag.name][rankMonth][code];
+        let r = d.s1 + d.s2 + d.s3 + d.s4;
+        let rate = d.target > 0 ? (r / d.target) * 100 : 0;
+        if(rate >= refPct) indicatorsReached += 1;
+      }
+    }
+    let ev = database.evals[ag.name] && database.evals[ag.name][rankMonth] ? database.evals[ag.name][rankMonth] : { dataQuality: 0, trackingQuality: 0 };
+    let totalScore = indicatorsReached + ev.dataQuality + ev.trackingQuality;
+    return { name: ag.name, site: ag.site, indicatorsReached, dataQuality: ev.dataQuality, trackingQuality: ev.trackingQuality, totalScore };
+  });
+
+  agentScores.sort((a,b) => b.totalScore - a.totalScore);
+  let agentRankHtml = '';
+  agentScores.forEach((item, idx) => {
+    agentRankHtml += `<tr><td><b>#${idx+1}</b></td><td>${item.name}</td><td>${item.site}</td><td><b>${item.indicatorsReached}</b></td><td>${item.dataQuality}</td><td>${item.trackingQuality}</td><td><b>${item.totalScore} pts</b></td></tr>`;
+  });
+  document.getElementById('rankingAgentsBody').innerHTML = agentRankHtml;
+}
+
+function renderAdminMatrices() {
+  // Matrice CPS
+  let h1 = '<th>CPS</th><th>Agent Associé</th>';
+  indicatorsCps.forEach(ind => { h1 += `<th>Cible : ${ind.code}</th>`; });
+  h1 += '<th>Action</th>';
+  document.getElementById('matrixCpsHeader').innerHTML = h1;
+
+  let b1 = '';
+  structures.forEach((st, i) => {
+    b1 += `<tr><td><b>${st.name}</b></td><td>${st.agent}</td>`;
+    indicatorsCps.forEach(ind => {
+      let t = database.cps[st.name][monthsList[0]][ind.code].target;
+      b1 += `<td><input type="number" class="editable-input" value="${t}" onchange="updateMatrixCpsTarget('${st.name}','${ind.code}',this.value)"></td>`;
+    });
+    b1 += `<td><button class="btn" style="color:#c23b32; padding:3px 6px;" onclick="removeCps(${i})">Supprimer</button></td></tr>`;
+  });
+  document.getElementById('matrixCpsBody').innerHTML = b1;
+
+  // Matrice Agents
+  let h2 = '<th>Agent de Saisie</th><th>Site Affecté</th>';
+  indicatorsAgent.forEach(ind => { h2 += `<th>Cible : ${ind.code}</th>`; });
+  h2 += '<th>Action</th>';
+  document.getElementById('matrixAgentHeader').innerHTML = h2;
+
+  let b2 = '';
+  agentsSaisieList.forEach((ag, i) => {
+    b2 += `<tr><td><b>${ag.name}</b></td><td>${ag.site}</td>`;
+    indicatorsAgent.forEach(ind => {
+      let t = database.agents[ag.name] && database.agents[ag.name][monthsList[0]][ind.code] ? database.agents[ag.name][monthsList[0]][ind.code].target : 20;
+      b2 += `<td><input type="number" class="editable-input" value="${t}" onchange="updateMatrixAgentTarget('${ag.name}','${ind.code}',this.value)"></td>`;
+    });
+    b2 += `<td><button class="btn" style="color:#c23b32; padding:3px 6px;" onclick="removeAgentEntry(${i})">Supprimer</button></td></tr>`;
+  });
+  document.getElementById('matrixAgentBody').innerHTML = b2;
+
+  // Indicateurs tables admin
+  let indCpsHtml = '';
+  indicatorsCps.forEach((ind, i) => {
+    indCpsHtml += `<tr><td><b>${ind.code}</b></td><td>${ind.label}</td><td><button class="btn" style="color:#c23b32;" onclick="removeIndCps(${i})">Supprimer</button></td></tr>`;
+  });
+  document.getElementById('adminIndCpsBody').innerHTML = indCpsHtml;
+
+  let indAgHtml = '';
+  indicatorsAgent.forEach((ind, i) => {
+    indAgHtml += `<tr><td><b>${ind.code}</b></td><td>${ind.label}</td><td><button class="btn" style="color:#c23b32;" onclick="removeIndAgent(${i})">Supprimer</button></td></tr>`;
+  });
+  document.getElementById('adminIndAgentBody').innerHTML = indAgHtml;
+
+  // Verrouillage mois
+  let lockHtml = '';
+  monthsList.forEach(m => {
+    let locked = database.locks[m];
+    lockHtml += `<tr><td><b>${m}</b></td><td><span class="${locked?'bad':'good'}">${locked?'Verrouillé':'Ouvert'}</span></td>
+    <td><button class="btn ${locked?'':'primary'}" onclick="toggleLock('${m}')">${locked?'Déverrouiller':'Verrouiller'}</button></td></tr>`;
+  });
+  document.getElementById('adminLockBody').innerHTML = lockHtml;
+
+  // Notation administrative mensuelle
+  let adminMonth = document.getElementById('adminNoteMonthSelect').value || monthsList[0];
+  let notesHtml = '';
+  structures.forEach(st => {
+    if(!database.evals[st.name][adminMonth]) database.evals[st.name][adminMonth] = { dataQuality: 0, trackingQuality: 0 };
+    let ev = database.evals[st.name][adminMonth];
+    notesHtml += `<tr><td><b>CPS : ${st.name}</b></td><td>CPS</td>
+    <td><input type="number" min="-3" max="3" class="editable-input" value="${ev.dataQuality}" onchange="updateAdminEval('${st.name}','${adminMonth}','dataQuality',this.value)"></td>
+    <td><input type="number" min="-2" max="2" class="editable-input" value="${ev.trackingQuality}" onchange="updateAdminEval('${st.name}','${adminMonth}','trackingQuality',this.value)"></td></tr>`;
+  });
+  agentsSaisieList.forEach(ag => {
+    if(!database.evals[ag.name][adminMonth]) database.evals[ag.name][adminMonth] = { dataQuality: 0, trackingQuality: 0 };
+    let ev = database.evals[ag.name][adminMonth];
+    notesHtml += `<tr><td><b>Agent : ${ag.name}</b></td><td>ASD</td>
+    <td><input type="number" min="-3" max="3" class="editable-input" value="${ev.dataQuality}" onchange="updateAdminEval('${ag.name}','${adminMonth}','dataQuality',this.value)"></td>
+    <td><input type="number" min="-2" max="2" class="editable-input" value="${ev.trackingQuality}" onchange="updateAdminEval('${ag.name}','${adminMonth}','trackingQuality',this.value)"></td></tr>`;
+  });
+  document.getElementById('adminNotesBody').innerHTML = notesHtml;
+
+  // Audit Trail
+  let auditHtml = '';
+  if(database.audit.length === 0) {
+    auditHtml = `<tr><td colspan="5" class="muted">Aucune modification enregistrée pour l'instant.</td></tr>`;
+  } else {
+    database.audit.forEach(item => {
+      auditHtml += `<tr><td>${item.timestamp}</td><td><b>${item.targetName}</b></td><td>${item.indicator}</td><td>${item.oldVal}</td><td><b>${item.newVal}</b></td></tr>`;
+    });
+  }
+  document.getElementById('auditTrailBody').innerHTML = auditHtml;
+}
+
+function updateMatrixCpsTarget(site, code, val) {
+  let t = parseInt(val) || 0;
+  let oldVal = database.cps[site][monthsList[0]][code].target;
+  monthsList.forEach(m => { database.cps[site][m][code].target = t; });
+  
+  database.audit.unshift({
+    timestamp: new Date().toLocaleString(),
+    targetName: `CPS : ${site}`,
+    indicator: code,
+    oldVal,
+    newVal: t
+  });
+  updateAll();
+}
+
+function updateMatrixAgentTarget(agent, code, val) {
+  let t = parseInt(val) || 0;
+  let oldVal = database.agents[agent][monthsList[0]][code].target;
+  monthsList.forEach(m => { database.agents[agent][m][code].target = t; });
+
+  database.audit.unshift({
+    timestamp: new Date().toLocaleString(),
+    targetName: `Agent : ${agent}`,
+    indicator: code,
+    oldVal,
+    newVal: t
+  });
+  updateAll();
+}
+
+function toggleLock(m) {
+  database.locks[m] = !database.locks[m];
+  updateAll();
+}
+
+function updateAdminEval(entity, month, field, val) {
+  let v = parseInt(val) || 0;
+  if(field === 'dataQuality') { if(v < -3) v = -3; if(v > 3) v = 3; }
+  if(field === 'trackingQuality') { if(v < -2) v = -2; if(v > 2) v = 2; }
+  database.evals[entity][month][field] = v;
+  renderRankings();
+}
+
+function addCps() {
+  let name = document.getElementById('newCpsName').value.trim().toUpperCase();
+  let agent = document.getElementById('newCpsAgent').value.trim();
+  if(!name) return;
+  structures.push({ name, agent });
+  database.cps[name] = {};
+  monthsList.forEach(m => {
+    database.cps[name][m] = {};
+    if(!database.evals[name]) database.evals[name] = {};
+    database.evals[name][m] = { dataQuality: 0, trackingQuality: 0 };
+    indicatorsCps.forEach(ind => { database.cps[name][m][ind.code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+  });
+  document.getElementById('newCpsName').value = '';
+  document.getElementById('newCpsAgent').value = '';
+  updateAll();
+}
+
+function removeCps(i) {
+  delete database.cps[structures[i].name];
+  structures.splice(i, 1);
+  updateAll();
+}
+
+function addAgentEntry() {
+  let name = document.getElementById('newAgentNameInput').value.trim();
+  let site = document.getElementById('newAgentSiteInput').value.trim().toUpperCase();
+  if(!name) return;
+  agentsSaisieList.push({ name, site });
+  database.agents[name] = {};
+  monthsList.forEach(m => {
+    database.agents[name][m] = {};
+    if(!database.evals[name]) database.evals[name] = {};
+    database.evals[name][m] = { dataQuality: 0, trackingQuality: 0 };
+    indicatorsAgent.forEach(ind => { database.agents[name][m][ind.code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+  });
+  document.getElementById('newAgentNameInput').value = '';
+  document.getElementById('newAgentSiteInput').value = '';
+  updateAll();
+}
+
+function removeAgentEntry(i) {
+  delete database.agents[agentsSaisieList[i].name];
+  agentsSaisieList.splice(i, 1);
+  updateAll();
+}
+
+function addIndCps() {
+  let code = document.getElementById('indCpsCode').value.trim().toUpperCase();
+  let label = document.getElementById('indCpsLabel').value.trim();
+  if(!code || !label) return;
+  indicatorsCps.push({ code, label });
+  structures.forEach(st => {
+    monthsList.forEach(m => { database.cps[st.name][m][code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+  });
+  document.getElementById('indCpsCode').value = '';
+  document.getElementById('indCpsLabel').value = '';
+  updateAll();
+}
+
+function removeIndCps(i) {
+  let code = indicatorsCps[i].code;
+  indicatorsCps.splice(i, 1);
+  structures.forEach(st => {
+    monthsList.forEach(m => { delete database.cps[st.name][m][code]; });
+  });
+  updateAll();
+}
+
+function addIndAgent() {
+  let code = document.getElementById('indAgentCode').value.trim().toUpperCase();
+  let label = document.getElementById('indAgentLabel').value.trim();
+  if(!code || !label) return;
+  indicatorsAgent.push({ code, label });
+  agentsSaisieList.forEach(ag => {
+    monthsList.forEach(m => { database.agents[ag.name][m][code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+  });
+  document.getElementById('indAgentCode').value = '';
+  document.getElementById('indAgentLabel').value = '';
+  updateAll();
+}
+
+function removeIndAgent(i) {
+  let code = indicatorsAgent[i].code;
+  indicatorsAgent.splice(i, 1);
+  agentsSaisieList.forEach(ag => {
+    monthsList.forEach(m => { delete database.agents[ag.name][m][code]; });
+  });
+  updateAll();
+}
+
+function exportExcel() {
+  let csv = "\uFEFFIndicateur;Cible;Realise;Ecart;Taux\n";
+  let rows = document.querySelectorAll('#dashTableBody tr, #dashAgentTableBody tr');
+  rows.forEach(r => {
+    let cols = r.querySelectorAll('td');
+    if(cols.length >= 5) {
+      let ind = cols[0].innerText.replace(/\n/g, ' - ');
+      let target = cols[1].innerText;
+      let real = cols[2].innerText;
+      let gap = cols[3].innerText;
+      let rate = cols[4].innerText;
+      csv += `"${ind}";"${target}";"${real}";"${gap}";"${rate}"\n`;
+    }
+  });
+
+  let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = `Rapport_Consolide_DJIGUI_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+window.onload = () => { toggleTimeSelectors(); populateAuthDropdowns(); updateAll(); };
+</script>
+</body>
+</html>
