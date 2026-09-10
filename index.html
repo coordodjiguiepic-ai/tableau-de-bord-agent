@@ -215,7 +215,18 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 
 <!-- ADMIN -->
 <section id="admin" class="panel">
-<div class="grid" style="gap:20px;">
+<div id="adminLoginWrapper" class="card" style="max-width:450px; margin:40px auto; text-align:center;">
+  <h2>🔐 Accès Restreint - Administrateur</h2>
+  <p class="muted">Veuillez saisir votre nom de profil et votre mot de passe administrateur.</p>
+  <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
+    <input type="text" id="adminUserField" placeholder="Nom de profil (ex: Kévin Medje)" style="width:100%;">
+    <input type="password" id="adminPassField" placeholder="Mot de passe administrateur" style="width:100%;">
+    <button class="btn primary" onclick="verifyAdminAccess()" style="width:100%; padding:10px;">Se connecter à l'administration</button>
+    <div id="adminLoginError" class="bad" style="font-weight:bold; display:none;">Identifiants incorrects. Accès refusé.</div>
+  </div>
+</div>
+
+<div id="adminContentContainer" style="display:none;" class="grid">
   
   <div class="card">
     <h2>1. Matrice Cibles CPS & Association des Agents</h2>
@@ -312,11 +323,34 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 </div>
 
 <script>
-// URL de votre Google Apps Script (À remplacer par l'URL obtenue lors du déploiement)
 const GOOGLE_SHEET_API_URL = 'COLLEZ_ICI_VOTRE_URL_GOOGLE_APPS_SCRIPT';
 
+// Identifiants Administrateurs autorisés
+const ADMIN_CREDENTIALS = [
+  { name: "Kévin Medje", pass: "DJIGUI2026*" } // Modifiez ou dupliquez ici si besoin d'autres administrateurs
+];
+
+let isAdminAuthenticated = false;
+
+function verifyAdminAccess() {
+  let nameInput = document.getElementById('adminUserField').value.trim();
+  let passInput = document.getElementById('adminPassField').value.trim();
+  let errorDiv = document.getElementById('adminLoginError');
+
+  let match = ADMIN_CREDENTIALS.find(adm => adm.name.toLowerCase() === nameInput.toLowerCase() && adm.pass === passInput);
+  if(match) {
+    isAdminAuthenticated = true;
+    errorDiv.style.display = 'none';
+    document.getElementById('adminLoginWrapper').style.display = 'none';
+    document.getElementById('adminContentContainer').style.display = 'grid';
+    renderAdminMatrices();
+  } else {
+    errorDiv.style.display = 'block';
+  }
+}
+
 function syncWithGoogleSheet(payload) {
-  if (GOOGLE_SHEET_API_URL.includes('COLLEZ_ICI')) return; // Ignore si l'URL n'est pas encore configurée
+  if (GOOGLE_SHEET_API_URL.includes('COLLEZ_ICI')) return;
   fetch(GOOGLE_SHEET_API_URL, {
     method: 'POST',
     mode: 'no-cors',
@@ -325,7 +359,6 @@ function syncWithGoogleSheet(payload) {
   }).catch(err => console.error('Erreur de synchronisation Google Sheets:', err));
 }
 
-// Listes de base
 let structures = [
   { name: "BOUGOUNI 1", agent: "Kévin Medje" },
   { name: "BOUGOUNI 2", agent: "Agent Alpha" },
@@ -357,13 +390,12 @@ const monthsList = [
   "2027-07","2027-08","2027-09"
 ];
 
-// Base de données structurée avec réalisations initiales à 0
 let database = {
-  cps: {},   // [site][mois][code] = { target, s1, s2, s3, s4 }
-  agents: {}, // [agentName][mois][code] = { target, s1, s2, s3, s4 }
-  evals: {},  // [entityName][mois] = { dataQuality: 0, trackingQuality: 0 }
-  locks: {},  // [mois] = boolean (true = locked)
-  audit: []   // [{timestamp, targetName, indicator, oldVal, newVal}]
+  cps: {},   
+  agents: {}, 
+  evals: {},  
+  locks: {},  
+  audit: []   
 };
 
 function initDB() {
@@ -404,11 +436,15 @@ function show(id, btn) {
   document.querySelectorAll('nav button').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('title').textContent = btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/, '').trim();
+  
+  if(id === 'admin' && !isAdminAuthenticated) {
+    document.getElementById('adminLoginWrapper').style.display = 'block';
+    document.getElementById('adminContentContainer').style.display = 'none';
+  }
   updateAll();
 }
 
 function populateDropdowns() {
-  // Filtre Dashboard Site CPS
   let siteSelect = document.getElementById('siteSelect');
   let curSite = siteSelect.value;
   let html = '<option value="CONSOLIDE">-- Tous les CPS (Consolidé) --</option>';
@@ -416,7 +452,6 @@ function populateDropdowns() {
   siteSelect.innerHTML = html;
   siteSelect.value = curSite;
 
-  // Filtre Dashboard Agent de Saisie
   let dashAgentFilter = document.getElementById('dashAgentFilter');
   let curDashAgent = dashAgentFilter.value;
   let aHtml = '<option value="CONSOLIDE">-- Tous les Agents (Consolidé) --</option>';
@@ -424,7 +459,6 @@ function populateDropdowns() {
   dashAgentFilter.innerHTML = aHtml;
   dashAgentFilter.value = curDashAgent;
 
-  // Mois de saisie & classements
   let entryMonthSelect = document.getElementById('entryMonthSelect');
   let curMonth = entryMonthSelect.value;
   let mHtml = '';
@@ -511,7 +545,6 @@ function checkAuth() {
     card.style.opacity = "1";
     card.style.pointerEvents = "auto";
     
-    // Affichage conditionnel des conteneurs de saisie
     if(role === 'CPS') {
       document.getElementById('saisieCardTitle').textContent = `Saisie CPS : ${site} (${agent})`;
       document.getElementById('saisieCpsContainer').style.display = 'block';
@@ -522,7 +555,6 @@ function checkAuth() {
       document.getElementById('saisieAgentContainer').style.display = 'block';
     }
 
-    // Gestion du verrouillage de période
     let isLocked = database.locks[entryMonth];
     let lockNotice = document.getElementById('lockNotice');
     if(isLocked) {
@@ -587,7 +619,6 @@ function updateAll() {
 
   let sitesToProcess = (currentSite === "CONSOLIDE") ? structures.map(s => s.name) : [currentSite];
 
-  // Aggrégation CPS
   let aggCps = {};
   indicatorsCps.forEach(ind => { aggCps[ind.code] = { label: ind.label, target: 0, realized: 0 }; });
 
@@ -613,7 +644,6 @@ function updateAll() {
     });
   });
 
-  // Aggrégation Agents avec filtre dédié
   let aggAgent = {};
   indicatorsAgent.forEach(ind => { aggAgent[ind.code] = { label: ind.label, target: 0, realized: 0 }; });
 
@@ -645,7 +675,6 @@ function updateAll() {
     });
   });
 
-  // Rendu Dashboard CPS
   let dashHtml = '', totT = 0, totR = 0;
   for(let code in aggCps) {
     let item = aggCps[code];
@@ -656,7 +685,6 @@ function updateAll() {
   }
   document.getElementById('dashTableBody').innerHTML = dashHtml;
 
-  // Rendu Dashboard Agents
   let agentDashHtml = '';
   for(let code in aggAgent) {
     let item = aggAgent[code];
@@ -674,7 +702,6 @@ function updateAll() {
   document.getElementById('kpiRealized').textContent = totR;
   document.getElementById('kpiGap').textContent = gGap > 0 ? Math.round(gGap) : 0;
 
-  // Rendu Formulaires de Saisie
   let authRole = document.getElementById('authRole').value;
   let authSite = document.getElementById('authSite').value;
   let authAgent = document.getElementById('authAgent').value;
@@ -717,14 +744,13 @@ function updateAll() {
   }
 
   renderRankings();
-  renderAdminMatrices();
+  if(isAdminAuthenticated) renderAdminMatrices();
 }
 
 function updateCpsVal(site, month, code, wk, val) {
   let newVal = parseInt(val) || 0;
   database.cps[site][month][code][wk] = newVal;
   
-  // Synchronisation automatique vers Google Sheets
   syncWithGoogleSheet({
     type: 'CPS',
     entity: site,
@@ -742,7 +768,6 @@ function updateAgentVal(agent, month, code, wk, val) {
   let newVal = parseInt(val) || 0;
   database.agents[agent][month][code][wk] = newVal;
 
-  // Synchronisation automatique vers Google Sheets
   syncWithGoogleSheet({
     type: 'ASD',
     entity: agent,
@@ -760,7 +785,6 @@ function renderRankings() {
   let refPct = parseFloat(document.getElementById('globalRefPercentage').value) || 80;
   let rankMonth = document.getElementById('rankingMonthSelect').value;
 
-  // Classement CPS
   let cpsScores = structures.map(st => {
     let indicatorsReached = 0;
     if(database.cps[st.name][rankMonth]) {
@@ -783,7 +807,6 @@ function renderRankings() {
   });
   document.getElementById('rankingCpsBody').innerHTML = cpsRankHtml;
 
-  // Classement Agents
   let agentScores = agentsSaisieList.map(ag => {
     let indicatorsReached = 0;
     if(database.agents[ag.name] && database.agents[ag.name][rankMonth]) {
@@ -808,7 +831,8 @@ function renderRankings() {
 }
 
 function renderAdminMatrices() {
-  // Matrice CPS
+  if(!isAdminAuthenticated) return;
+
   let h1 = '<th>CPS</th><th>Agent Associé</th>';
   indicatorsCps.forEach(ind => { h1 += `<th>Cible : ${ind.code}</th>`; });
   h1 += '<th>Action</th>';
@@ -825,7 +849,6 @@ function renderAdminMatrices() {
   });
   document.getElementById('matrixCpsBody').innerHTML = b1;
 
-  // Matrice Agents
   let h2 = '<th>Agent de Saisie</th><th>Site Affecté</th>';
   indicatorsAgent.forEach(ind => { h2 += `<th>Cible : ${ind.code}</th>`; });
   h2 += '<th>Action</th>';
@@ -842,7 +865,6 @@ function renderAdminMatrices() {
   });
   document.getElementById('matrixAgentBody').innerHTML = b2;
 
-  // Indicateurs tables admin
   let indCpsHtml = '';
   indicatorsCps.forEach((ind, i) => {
     indCpsHtml += `<tr><td><b>${ind.code}</b></td><td>${ind.label}</td><td><button class="btn" style="color:#c23b32;" onclick="removeIndCps(${i})">Supprimer</button></td></tr>`;
@@ -855,7 +877,6 @@ function renderAdminMatrices() {
   });
   document.getElementById('adminIndAgentBody').innerHTML = indAgHtml;
 
-  // Verrouillage mois
   let lockHtml = '';
   monthsList.forEach(m => {
     let locked = database.locks[m];
@@ -864,7 +885,6 @@ function renderAdminMatrices() {
   });
   document.getElementById('adminLockBody').innerHTML = lockHtml;
 
-  // Notation administrative mensuelle
   let adminMonth = document.getElementById('adminNoteMonthSelect').value || monthsList[0];
   let notesHtml = '';
   structures.forEach(st => {
@@ -883,7 +903,6 @@ function renderAdminMatrices() {
   });
   document.getElementById('adminNotesBody').innerHTML = notesHtml;
 
-  // Audit Trail
   let auditHtml = '';
   if(database.audit.length === 0) {
     auditHtml = `<tr><td colspan="5" class="muted">Aucune modification enregistrée pour l'instant.</td></tr>`;
