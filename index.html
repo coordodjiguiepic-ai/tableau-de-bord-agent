@@ -1,7 +1,7 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CPS Performance DJIGUI — Système Intégré</title>
 <style>
@@ -43,25 +43,27 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 <aside>
 <div class="brand">DJIGUI VIH/SIDA<br><small>Oct 2026 — Sep 2027</small></div>
 <nav>
-<button class="active" onclick="show('dash',this)">▣ Tableau de bord</button>
-<button onclick="show('entry',this)">✎ Saisie CPS & Agents</button>
-<button onclick="show('ranking',this)">🏆 Classements</button>
-<button onclick="show('admin',this)">⚙ Matrices Admin</button>
+<button class="" onclick="show('dash',this)">▣ Tableau de bord</button>
+<button onclick="show('entry',this)" class="">✎ Saisie CPS & Agents</button>
+<button onclick="show('ranking',this)" class="">🏆 Classements</button>
+<button onclick="show('admin',this)" class="active">⚙ Matrices Admin</button>
 </nav>
 </aside>
 <main>
 <div class="head">
   <div>
-    <h1 id="title">Tableau de bord</h1>
+    <h1 id="title">Matrices Admin</h1>
     <span class="muted">Suivi consolidé & Indicateurs opérationnels</span>
   </div>
   <div>
     <button class="btn primary" onclick="exportExcel()">📥 Exporter vers Excel</button>
+    <!-- BOUTON POUR RECHARGER LES DONNÉES DEPUIS GOOGLE SHEETS -->
+    <button class="btn primary" onclick="loadDataFromSheet()" style="background:#104d39; font-weight:bold; margin-left:10px;">🔄 Recharger depuis Google Sheets</button>
   </div>
 </div>
 
 <!-- DASHBOARD -->
-<section id="dash" class="panel active">
+<section id="dash" class="panel">
 <div class="filters-bar">
   <div>
     <label class="muted">Fréquence d'affichage</label>
@@ -75,12 +77,39 @@ input.editable-input{width:65px;padding:4px;text-align:center}
   </div>
   <div id="selectorContainer">
     <label class="muted">Période</label>
-    <select id="periodValueSelect" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;"></select>
+    <select id="periodValueSelect" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;">
+      <option value="2026-10">Mois : 2026-10</option>
+      <option value="2026-11">Mois : 2026-11</option>
+      <option value="2026-12">Mois : 2026-12</option>
+      <option value="2027-01">Mois : 2027-01</option>
+      <option value="2027-02">Mois : 2027-02</option>
+      <option value="2027-03">Mois : 2027-03</option>
+      <option value="2027-04">Mois : 2027-04</option>
+      <option value="2027-05">Mois : 2027-05</option>
+      <option value="2027-06">Mois : 2027-06</option>
+      <option value="2027-07">Mois : 2027-07</option>
+      <option value="2027-08">Mois : 2027-08</option>
+      <option value="2027-09">Mois : 2027-09</option>
+    </select>
   </div>
   <div>
     <label class="muted">Filtrer par CPS</label>
     <select id="siteSelect" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;">
       <option value="CONSOLIDE">-- Tous les CPS (Consolidé) --</option>
+      <option value="BOUGOUNI 1">CPS BOUGOUNI 1</option>
+      <option value="BOUGOUNI 2">CPS BOUGOUNI 2</option>
+      <option value="GARALO 2">CPS GARALO 2</option>
+      <option value="MANANKORO">CPS MANANKORO</option>
+      <option value="KOUMANTOU">CPS KOUMANTOU</option>
+      <option value="SANSO">CPS SANSO</option>
+      <option value="NIENA">CPS NIENA</option>
+      <option value="KOLONDIEBA">CPS KOLONDIEBA</option>
+      <option value="FAKOLA">CPS FAKOLA</option>
+      <option value="KADIANA">CPS KADIANA</option>
+      <option value="YANFOLILA">CPS YANFOLILA</option>
+      <option value="KALANA">CPS KALANA</option>
+      <option value="SELINGUE">CPS SELINGUE</option>
+      <option value="SIEKOROLE">CPS SIEKOROLE</option>
     </select>
   </div>
 </div>
@@ -89,16 +118,24 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 
 <div class="grid kpis">
   <div class="card"><div class="muted">Taux global</div><div id="kpiGlobalRate" class="num good">0%</div></div>
-  <div class="card"><div class="muted">Cible totale</div><div id="kpiTarget" class="num">0</div></div>
+  <div class="card"><div class="muted">Cible totale</div><div id="kpiTarget" class="num">4940</div></div>
   <div class="card"><div class="muted">Réalisation</div><div id="kpiRealized" class="num">0</div></div>
-  <div class="card"><div class="muted">GAP restant</div><div id="kpiGap" class="num bad">0</div></div>
+  <div class="card"><div class="muted">GAP restant</div><div id="kpiGap" class="num bad">4940</div></div>
 </div><br>
 
 <div class="card" style="margin-bottom:20px;">
   <h2>Performance CPS (Indicateurs Cliniques/Communautaires)</h2>
   <table>
     <thead><tr><th>Indicateur</th><th>Cible Période</th><th>Réalisé Période</th><th>GAP</th><th>Taux</th></tr></thead>
-    <tbody id="dashTableBody"></tbody>
+    <tbody id="dashTableBody">
+      <tr><td><b>HTS_SELF</b><br><span class="muted">Kit distribué (HTS_SELF)</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>SELF_REACT</b><br><span class="muted">ADVIH réactif</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>SELF_CONF</b><br><span class="muted">ADVIH confirmé</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>SELF_LINKED</b><br><span class="muted">ADVIH réactif lié au TARV</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>VL_SAMPLE</b><br><span class="muted">CV prélevée</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>INDEX</b><br><span class="muted">index testé</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+      <tr><td><b>HTS_TX</b><br><span class="muted">Dépistage avec nouvel algorithme</span></td><td>560</td><td>0</td><td class="bad">560</td><td><b>0%</b></td></tr>
+    </tbody>
   </table>
 </div>
 
@@ -109,12 +146,19 @@ input.editable-input{width:65px;padding:4px;text-align:center}
       <label class="muted">Filtrer Agent de Saisie :</label>
       <select id="dashAgentFilter" onchange="updateAll()" style="font-weight:bold; background:#edf7f2; color:#104d39;">
         <option value="CONSOLIDE">-- Tous les Agents (Consolidé) --</option>
+        <option value="MADINE COULIBALY">MADINE COULIBALY (YANFOLILA)</option>
+        <option value="OUMAR DOUMBIA">OUMAR DOUMBIA (BOUGOUNI)</option>
+        <option value="BABA DIARRA">BABA DIARRA (KOLONDIEBA)</option>
       </select>
     </div>
   </div>
   <table>
     <thead><tr><th>Indicateur Agent</th><th>Cible Période</th><th>Réalisé Période</th><th>GAP</th><th>Taux</th></tr></thead>
-    <tbody id="dashAgentTableBody"></tbody>
+    <tbody id="dashAgentTableBody">
+      <tr><td><b>CV_DOC</b><br><span class="muted">Résultats CV documentés</span></td><td>900</td><td>0</td><td class="bad">900</td><td><b>0%</b></td></tr>
+      <tr><td><b>PDV_RET</b><br><span class="muted">Perdus de vue retrouvés</span></td><td>60</td><td>0</td><td class="bad">60</td><td><b>0%</b></td></tr>
+      <tr><td><b>DIST_COMM</b><br><span class="muted">Distribution communautaire</span></td><td>60</td><td>0</td><td class="bad">60</td><td><b>0%</b></td></tr>
+    </tbody>
   </table>
 </div>
 </section>
@@ -131,28 +175,36 @@ input.editable-input{width:65px;padding:4px;text-align:center}
   </div>
   <div>
     <label class="muted">Filtre 2 : Site (Implantation)</label>
-    <select id="authSite" style="font-weight:bold;" onchange="populateAuthNames(); checkAuth();">
-      <option value="">-- Choisir un site --</option>
-    </select>
+    <select id="authSite" style="font-weight:bold;" onchange="populateAuthNames(); checkAuth();"><option value="">-- Choisir un site --</option></select>
   </div>
   <div>
     <label class="muted">Filtre 3 : Nom (Individuel)</label>
-    <select id="authAgent" style="font-weight:bold;" onchange="checkAuth()">
-      <option value="">-- Choisir un nom --</option>
-    </select>
+    <select id="authAgent" style="font-weight:bold;" onchange="checkAuth()"><option value="">-- Choisir un nom --</option></select>
   </div>
-  <div id="authStatus" style="font-weight:bold; margin-top:15px;" class="bad">Veuillez configurer les filtres pour débloquer la saisie.</div>
+  <div id="authStatus" style="font-weight:bold; margin-top:15px;" class="good">Accès autorisé (CPS) pour DRISSA MARIKO sur BOUGOUNI 1.</div>
 </div>
 
-<div class="card" id="saisieCard" style="opacity:0.4; pointer-events:none;">
+<div class="card" id="saisieCard" style="opacity: 1; pointer-events: auto;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-    <h2 id="saisieCardTitle">Saisie Hebdomadaire des Réalisations</h2>
+    <h2 id="saisieCardTitle">Saisie CPS : BOUGOUNI 1 (DRISSA MARIKO)</h2>
     <div style="display:flex; align-items:center; gap:10px;">
       <div>
         <label class="muted">Mois de saisie :</label>
-        <select id="entryMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+        <select id="entryMonthSelect" onchange="updateAll()" style="font-weight:bold;">
+          <option value="2026-10">2026-10</option>
+          <option value="2026-11">2026-11</option>
+          <option value="2026-12">2026-12</option>
+          <option value="2027-01">2027-01</option>
+          <option value="2027-02">2027-02</option>
+          <option value="2027-03">2027-03</option>
+          <option value="2027-04">2027-04</option>
+          <option value="2027-05">2027-05</option>
+          <option value="2027-06">2027-06</option>
+          <option value="2027-07">2027-07</option>
+          <option value="2027-08">2027-08</option>
+          <option value="2027-09">2027-09</option>
+        </select>
       </div>
-      <!-- BOUTON SAUVAGE POUR SAUVEGARDER LES DONNEES -->
       <div>
         <button class="btn primary" onclick="sauvegardeSauvage()" style="background:#104d39; font-weight:bold; margin-top:16px;">💾 Sauvegarder dans Sheet</button>
       </div>
@@ -160,7 +212,7 @@ input.editable-input{width:65px;padding:4px;text-align:center}
   </div>
   <div id="lockNotice" class="notice" style="display:none; background:#fdecea; border-color:#c23b32; color:#c23b32;"><b>Période verrouillée :</b> L'administrateur a verrouillé ce mois. La modification des données est désactivée.</div>
 
-  <div id="saisieCpsContainer">
+  <div id="saisieCpsContainer" style="display: block;">
     <h3>Indicateurs CPS</h3>
     <table>
       <thead><tr><th>Indicateur</th><th>Cible Mensuelle</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>Total</th><th>Taux</th></tr></thead>
@@ -189,7 +241,20 @@ input.editable-input{width:65px;padding:4px;text-align:center}
     </div>
     <div>
       <label class="muted">Mois de Notation Administrative à afficher</label>
-      <select id="rankingMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+      <select id="rankingMonthSelect" onchange="updateAll()" style="font-weight:bold;">
+        <option value="2026-10">2026-10</option>
+        <option value="2026-11">2026-11</option>
+        <option value="2026-12">2026-12</option>
+        <option value="2027-01">2027-01</option>
+        <option value="2027-02">2027-02</option>
+        <option value="2027-03">2027-03</option>
+        <option value="2027-04">2027-04</option>
+        <option value="2027-05">2027-05</option>
+        <option value="2027-06">2027-06</option>
+        <option value="2027-07">2027-07</option>
+        <option value="2027-08">2027-08</option>
+        <option value="2027-09">2027-09</option>
+      </select>
     </div>
   </div>
 </div>
@@ -220,8 +285,8 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 </section>
 
 <!-- ADMIN -->
-<section id="admin" class="panel">
-<div id="adminLoginWrapper" class="card" style="max-width:450px; margin:40px auto; text-align:center;">
+<section id="admin" class="panel active">
+<div id="adminLoginWrapper" class="card" style="max-width: 450px; margin: 40px auto; text-align: center; display: none;">
   <h2>🔐 Accès Restreint - Administrateur</h2>
   <p class="muted">Veuillez saisir votre nom de profil et votre mot de passe administrateur.</p>
   <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
@@ -232,8 +297,8 @@ input.editable-input{width:65px;padding:4px;text-align:center}
   </div>
 </div>
 
-<div id="adminContentContainer" style="display:none;" class="grid">
-  
+<div id="adminContentContainer" style="display: grid;" class="grid">
+
   <div class="card">
     <h2>1. Matrice Cibles CPS & Association des Agents</h2>
     <table>
@@ -321,116 +386,55 @@ input.editable-input{width:65px;padding:4px;text-align:center}
       <tbody id="auditTrailBody"></tbody>
     </table>
   </div>
-
 </div>
 </section>
 
-</main>
-</div>
-
 <script>
-// URL Google Apps Script intégrée
-const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzPg4k-e2V-4_IkNdbjBYsPpjegLIL5f3wVJ0ewuAw9FaTkXFozbtKLSt1PA0aVPrkjiQ/exec';
+// =============================
+// 1. CONFIGURATION DE L'URL GOOGLE APPS SCRIPT (Étape 3.1)
+// =============================
+const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwpqy4j6u_BSnHgktGm0NnzCrMDo1xlKX9VbefMNvkcVM0Egw5Bt8WdNb7qu_I_wR53/exec';
 
-// Identifiants Administrateurs autorisés
+// =============================
+// 2. DONNÉES INITIALES (À GARDER TEL QUEL)
+// =============================
 const ADMIN_CREDENTIALS = [
   { name: "coordodjiguiepic", pass: "DJIGUI2001@" }
 ];
 
 let isAdminAuthenticated = false;
 
-function verifyAdminAccess() {
-  let nameInput = document.getElementById('adminUserField').value.trim();
-  let passInput = document.getElementById('adminPassField').value.trim();
-  let errorDiv = document.getElementById('adminLoginError');
-
-  let match = ADMIN_CREDENTIALS.find(adm => adm.name.toLowerCase() === nameInput.toLowerCase() && adm.pass === passInput);
-  if(match) {
-    isAdminAuthenticated = true;
-    errorDiv.style.display = 'none';
-    document.getElementById('adminLoginWrapper').style.display = 'none';
-    document.getElementById('adminContentContainer').style.display = 'grid';
-    renderAdminMatrices();
-  } else {
-    errorDiv.style.display = 'block';
-  }
-}
-
-function syncWithGoogleSheet(payload) {
-  if (GOOGLE_SHEET_API_URL.includes('COLLEZ_ICI')) return;
-  fetch(GOOGLE_SHEET_API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(err => console.error('Erreur de synchronisation Google Sheets:', err));
-}
-
-// Fonction du bouton sauvage pour forcer l'envoi de toutes les lignes visibles ou de la saisie active vers le Sheet
-function sauvegardeSauvage() {
-  let authRole = document.getElementById('authRole').value;
-  let authSite = document.getElementById('authSite').value;
-  let authAgent = document.getElementById('authAgent').value;
-  let entryMonth = document.getElementById('entryMonthSelect').value;
-
-  if(!authSite || !authAgent) {
-    alert("Veuillez d'abord sélectionner votre rôle, site et nom pour sauvegarder.");
-    return;
-  }
-
-  if(authRole === 'CPS' && database.cps[authSite] && database.cps[authSite][entryMonth]) {
-    let cData = database.cps[authSite][entryMonth];
-    for(let code in cData) {
-      let d = cData[code];
-      ['s1', 's2', 's3', 's4'].forEach(wk => {
-        syncWithGoogleSheet({
-          type: 'CPS (Sauvegarde manuelle)',
-          entity: authSite,
-          month: entryMonth,
-          indicator: code,
-          semaine: wk,
-          valeur: d[wk],
-          timestamp: new Date().toISOString()
-        });
-      });
-    }
-    alert("Données CPS synchronisées avec succès vers Google Sheets !");
-  } else if(authRole === 'ASD' && database.agents[authAgent] && database.agents[authAgent][entryMonth]) {
-    let agData = database.agents[authAgent][entryMonth];
-    for(let code in agData) {
-      let d = agData[code];
-      ['s1', 's2', 's3', 's4'].forEach(wk => {
-        syncWithGoogleSheet({
-          type: 'ASD (Sauvegarde manuelle)',
-          entity: authAgent,
-          month: entryMonth,
-          indicator: code,
-          semaine: wk,
-          valeur: d[wk],
-          timestamp: new Date().toISOString()
-        });
-      });
-    }
-    alert("Données Agent de Saisie synchronisées avec succès vers Google Sheets !");
-  }
-}
-
 let structures = [
-  { name: "BOUGOUNI 1", agent: "Kévin Medje" },
-  { name: "BOUGOUNI 2", agent: "Agent Alpha" },
-  { name: "MANANKORO", agent: "Agent Beta" },
-  { name: "YANFOLILA", agent: "Agent Gamma" }
+  { name: "BOUGOUNI 1", agent: "DRISSA MARIKO" },
+  { name: "BOUGOUNI 2", agent: "ROKIA SINYOKO" },
+  { name: "GARALO 2", agent: "MODIBO TRAORE" },
+  { name: "MANANKORO", agent: "SEYDOU SIDIBE" },
+  { name: "KOUMANTOU", agent: "MADY DIAKITE" },
+  { name: "SANSO", agent: "DJIGUI MAIGA" },
+  { name: "NIENA", agent: "HAWA KONE" },
+  { name: "KOLONDIEBA", agent: "BABA FALL" },
+  { name: "FAKOLA", agent: "NEW" },
+  { name: "KADIANA", agent: "ADIARRA TOGOLA" },
+  { name: "YANFOLILA", agent: "NGOLO COULIBALY" },
+  { name: "KALANA", agent: "BATOGOMA DIARRA" },
+  { name: "SELINGUE", agent: "HAROUNA DOUMBIA" },
+  { name: "SIEKOROLE", agent: "ASSITAN DOLO" }
 ];
 
 let agentsSaisieList = [
-  { name: "Agent Saisie 1", site: "BOUGOUNI 1" },
-  { name: "Agent Saisie 2", site: "MANANKORO" },
-  { name: "Agent Saisie 3", site: "YANFOLILA" }
+  { name: "MADINE COULIBALY", site: "YANFOLILA" },
+  { name: "OUMAR DOUMBIA", site: "BOUGOUNI" },
+  { name: "BABA DIARRA", site: "KOLONDIEBA" }
 ];
 
 let indicatorsCps = [
   { code: "HTS_SELF", label: "Kit distribué (HTS_SELF)" },
-  { code: "VL_Supp", label: "Suppression charge virale" }
+  { code: "SELF_REACT", label: "ADVIH réactif" },
+  { code: "SELF_CONF", label: "ADVIH confirmé" },
+  { code: "SELF_LINKED", label: "ADVIH réactif lié au TARV" },
+  { code: "VL_SAMPLE", label: "CV prélevée" },
+  { code: "INDEX", label: "index testé" },
+  { code: "HTS_TX", label: "Dépistage avec nouvel algorithme" }
 ];
 
 let indicatorsAgent = [
@@ -447,22 +451,86 @@ const monthsList = [
 ];
 
 let database = {
-  cps: {},   
-  agents: {}, 
-  evals: {},  
-  locks: {},  
-  audit: []   
+  cps: {},
+  agents: {},
+  evals: {},
+  locks: {},
+  audit: []
 };
 
+// =============================
+// 3. FONCTION POUR CHARGER LES DONNÉES DEPUIS GOOGLE SHEETS (Étape 3.2)
+// =============================
+async function loadDataFromSheet() {
+  try {
+    // Charger les données CPS
+    const cpsResponse = await fetch(`${GOOGLE_SHEET_API_URL}?type=CPS`);
+    const cpsData = await cpsResponse.json();
+    cpsData.forEach(item => {
+      if (!database.cps[item.Entity]) database.cps[item.Entity] = {};
+      if (!database.cps[item.Entity][item.Month]) database.cps[item.Entity][item.Month] = {};
+      if (!database.cps[item.Entity][item.Month][item.Indicator]) {
+        database.cps[item.Entity][item.Month][item.Indicator] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 };
+      }
+      database.cps[item.Entity][item.Month][item.Indicator][item.Semaine] = parseInt(item.Valeur) || 0;
+    });
+
+    // Charger les données ASD
+    const asdResponse = await fetch(`${GOOGLE_SHEET_API_URL}?type=ASD`);
+    const asdData = await asdResponse.json();
+    asdData.forEach(item => {
+      if (!database.agents[item.Entity]) database.agents[item.Entity] = {};
+      if (!database.agents[item.Entity][item.Month]) database.agents[item.Entity][item.Month] = {};
+      if (!database.agents[item.Entity][item.Month][item.Indicator]) {
+        database.agents[item.Entity][item.Month][item.Indicator] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 };
+      }
+      database.agents[item.Entity][item.Month][item.Indicator][item.Semaine] = parseInt(item.Valeur) || 0;
+    });
+
+    // Charger les évaluations
+    const evalsResponse = await fetch(`${GOOGLE_SHEET_API_URL}?type=evals`);
+    const evalsData = await evalsResponse.json();
+    evalsData.forEach(item => {
+      if (!database.evals[item.Entity]) database.evals[item.Entity] = {};
+      if (!database.evals[item.Entity][item.Month]) {
+        database.evals[item.Entity][item.Month] = { dataQuality: 0, trackingQuality: 0 };
+      }
+      database.evals[item.Entity][item.Month].dataQuality = parseInt(item.DataQuality) || 0;
+      database.evals[item.Entity][item.Month].trackingQuality = parseInt(item.TrackingQuality) || 0;
+    });
+
+    // Charger l'audit trail
+    const auditResponse = await fetch(`${GOOGLE_SHEET_API_URL}?type=audit`);
+    const auditData = await auditResponse.json();
+    database.audit = auditData.map(item => ({
+      timestamp: item.Timestamp,
+      targetName: item.TargetName,
+      indicator: item.Indicator,
+      oldVal: item.OldVal,
+      newVal: item.NewVal
+    }));
+
+    console.log("✅ Données chargées depuis Google Sheets avec succès !");
+    updateAll();
+
+  } catch (error) {
+    console.error("❌ Erreur lors du chargement des données:", error);
+    alert("Erreur lors du chargement des données depuis Google Sheets. Vérifiez votre connexion ou l'URL du script.");
+  }
+}
+
+// =============================
+// 4. FONCTION INITDB MODIFIÉE (Étape 3.3)
+// =============================
 function initDB() {
   monthsList.forEach(m => {
-    database.locks[m] = false;
+    database.locks[m] = database.locks[m] || false;
     structures.forEach(st => {
       if(!database.cps[st.name]) database.cps[st.name] = {};
       if(!database.cps[st.name][m]) database.cps[st.name][m] = {};
       if(!database.evals[st.name]) database.evals[st.name] = {};
       if(!database.evals[st.name][m]) database.evals[st.name][m] = { dataQuality: 0, trackingQuality: 0 };
-      
+
       indicatorsCps.forEach(ind => {
         if(!database.cps[st.name][m][ind.code]) {
           database.cps[st.name][m][ind.code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 };
@@ -483,8 +551,162 @@ function initDB() {
       });
     });
   });
+
+  // Charge les données depuis Google Sheets au démarrage
+  loadDataFromSheet();
 }
-initDB();
+
+// =============================
+// 5. FONCTION SYNCWITHGOOGLESHEET OPTIMISÉE (Étape 3.4)
+// =============================
+function syncWithGoogleSheet(payload) {
+  if (GOOGLE_SHEET_API_URL.includes('COLLEZ_ICI') || !GOOGLE_SHEET_API_URL) {
+    console.error("❌ URL du script Google Apps non configurée !");
+    return;
+  }
+
+  fetch(GOOGLE_SHEET_API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(response => {
+    if (!response.ok) {
+      console.error("❌ Erreur lors de la synchronisation:", response.statusText);
+    } else {
+      console.log("✅ Données synchronisées avec succès !");
+    }
+  })
+  .catch(err => {
+    console.error('❌ Erreur de synchronisation Google Sheets:', err);
+  });
+}
+
+// =============================
+// 6. FONCTIONS DE MISE À JOUR MODIFIÉES (Étape 3.5)
+// =============================
+function updateCpsVal(site, month, code, wk, val) {
+  let newVal = parseInt(val) || 0;
+  if (!database.cps[site]) database.cps[site] = {};
+  if (!database.cps[site][month]) database.cps[site][month] = {};
+  if (!database.cps[site][month][code]) {
+    database.cps[site][month][code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 };
+  }
+
+  database.cps[site][month][code][wk] = newVal;
+
+  // Synchronisation immédiate avec Google Sheets
+  syncWithGoogleSheet({
+    type: 'CPS',
+    entity: site,
+    month: month,
+    indicator: code,
+    semaine: wk,
+    valeur: newVal,
+    timestamp: new Date().toISOString()
+  });
+
+  updateAll();
+}
+
+function updateAgentVal(agent, month, code, wk, val) {
+  let newVal = parseInt(val) || 0;
+  if (!database.agents[agent]) database.agents[agent] = {};
+  if (!database.agents[agent][month]) database.agents[agent][month] = {};
+  if (!database.agents[agent][month][code]) {
+    database.agents[agent][month][code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 };
+  }
+
+  database.agents[agent][month][code][wk] = newVal;
+
+  // Synchronisation immédiate avec Google Sheets
+  syncWithGoogleSheet({
+    type: 'ASD',
+    entity: agent,
+    month: month,
+    indicator: code,
+    semaine: wk,
+    valeur: newVal,
+    timestamp: new Date().toISOString()
+  });
+
+  updateAll();
+}
+
+// =============================
+// 7. FONCTION SAUVEGARDE SAUVAGE MODIFIÉE (Étape 3.6)
+// =============================
+function sauvegardeSauvage() {
+  let authRole = document.getElementById('authRole').value;
+  let authSite = document.getElementById('authSite').value;
+  let authAgent = document.getElementById('authAgent').value;
+  let entryMonth = document.getElementById('entryMonthSelect').value;
+
+  if(!authSite || !authAgent) {
+    alert("⚠️ Veuillez d'abord sélectionner votre rôle, site et nom pour sauvegarder.");
+    return;
+  }
+
+  if(authRole === 'CPS' && database.cps[authSite] && database.cps[authSite][entryMonth]) {
+    let cData = database.cps[authSite][entryMonth];
+    for(let code in cData) {
+      let d = cData[code];
+      ['s1', 's2', 's3', 's4'].forEach(wk => {
+        syncWithGoogleSheet({
+          type: 'CPS (Sauvegarde manuelle)',
+          entity: authSite,
+          month: entryMonth,
+          indicator: code,
+          semaine: wk,
+          valeur: d[wk],
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    alert("✅ Données CPS synchronisées avec succès vers Google Sheets !");
+  }
+  else if(authRole === 'ASD' && database.agents[authAgent] && database.agents[authAgent][entryMonth]) {
+    let agData = database.agents[authAgent][entryMonth];
+    for(let code in agData) {
+      let d = agData[code];
+      ['s1', 's2', 's3', 's4'].forEach(wk => {
+        syncWithGoogleSheet({
+          type: 'ASD (Sauvegarde manuelle)',
+          entity: authAgent,
+          month: entryMonth,
+          indicator: code,
+          semaine: wk,
+          valeur: d[wk],
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    alert("✅ Données Agent de Saisie synchronisées avec succès vers Google Sheets !");
+  }
+}
+
+// =============================
+// 8. FONCTIONS EXISTANTES (À GARDER TEL QUEL)
+// =============================
+function verifyAdminAccess() {
+  let nameInput = document.getElementById('adminUserField').value.trim();
+  let passInput = document.getElementById('adminPassField').value.trim();
+  let errorDiv = document.getElementById('adminLoginError');
+
+  let match = ADMIN_CREDENTIALS.find(adm => adm.name.toLowerCase() === nameInput.toLowerCase() && adm.pass === passInput);
+  if(match) {
+    isAdminAuthenticated = true;
+    errorDiv.style.display = 'none';
+    document.getElementById('adminLoginWrapper').style.display = 'none';
+    document.getElementById('adminContentContainer').style.display = 'grid';
+    renderAdminMatrices();
+  } else {
+    errorDiv.style.display = 'block';
+  }
+}
 
 function show(id, btn) {
   document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
@@ -492,7 +714,7 @@ function show(id, btn) {
   document.querySelectorAll('nav button').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('title').textContent = btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/, '').trim();
-  
+
   if(id === 'admin' && !isAdminAuthenticated) {
     document.getElementById('adminLoginWrapper').style.display = 'block';
     document.getElementById('adminContentContainer').style.display = 'none';
@@ -538,7 +760,7 @@ function populateAuthDropdowns() {
   let authSite = document.getElementById('authSite');
   let curAuthSite = authSite.value;
   let sHtml = '<option value="">-- Choisir un site --</option>';
-  
+
   if(role === 'CPS') {
     structures.forEach(s => { sHtml += `<option value="${s.name}">${s.name}</option>`; });
   } else {
@@ -600,7 +822,7 @@ function checkAuth() {
     status.textContent = `Accès autorisé (${role}) pour ${agent} sur ${site}.`;
     card.style.opacity = "1";
     card.style.pointerEvents = "auto";
-    
+
     if(role === 'CPS') {
       document.getElementById('saisieCardTitle').textContent = `Saisie CPS : ${site} (${agent})`;
       document.getElementById('saisieCpsContainer').style.display = 'block';
@@ -803,40 +1025,6 @@ function updateAll() {
   if(isAdminAuthenticated) renderAdminMatrices();
 }
 
-function updateCpsVal(site, month, code, wk, val) {
-  let newVal = parseInt(val) || 0;
-  database.cps[site][month][code][wk] = newVal;
-  
-  syncWithGoogleSheet({
-    type: 'CPS',
-    entity: site,
-    month: month,
-    indicator: code,
-    semaine: wk,
-    valeur: newVal,
-    timestamp: new Date().toISOString()
-  });
-
-  updateAll();
-}
-
-function updateAgentVal(agent, month, code, wk, val) {
-  let newVal = parseInt(val) || 0;
-  database.agents[agent][month][code][wk] = newVal;
-
-  syncWithGoogleSheet({
-    type: 'ASD',
-    entity: agent,
-    month: month,
-    indicator: code,
-    semaine: wk,
-    valeur: newVal,
-    timestamp: new Date().toISOString()
-  });
-
-  updateAll();
-}
-
 function renderRankings() {
   let refPct = parseFloat(document.getElementById('globalRefPercentage').value) || 80;
   let rankMonth = document.getElementById('rankingMonthSelect').value;
@@ -974,7 +1162,7 @@ function updateMatrixCpsTarget(site, code, val) {
   let t = parseInt(val) || 0;
   let oldVal = database.cps[site][monthsList[0]][code].target;
   monthsList.forEach(m => { database.cps[site][m][code].target = t; });
-  
+
   database.audit.unshift({
     timestamp: new Date().toLocaleString(),
     targetName: `CPS : ${site}`,
@@ -1010,6 +1198,17 @@ function updateAdminEval(entity, month, field, val) {
   if(field === 'dataQuality') { if(v < -3) v = -3; if(v > 3) v = 3; }
   if(field === 'trackingQuality') { if(v < -2) v = -2; if(v > 2) v = 2; }
   database.evals[entity][month][field] = v;
+
+  // Synchronisation avec Google Sheets pour les évaluations
+  syncWithGoogleSheet({
+    type: 'evals',
+    entity: entity,
+    month: month,
+    field: field,
+    value: v,
+    timestamp: new Date().toISOString()
+  });
+
   renderRankings();
 }
 
@@ -1062,10 +1261,14 @@ function removeAgentEntry(i) {
 function addIndCps() {
   let code = document.getElementById('indCpsCode').value.trim().toUpperCase();
   let label = document.getElementById('indCpsLabel').value.trim();
-  if(!code || !label) return;
+  if(!code) return;
   indicatorsCps.push({ code, label });
   structures.forEach(st => {
-    monthsList.forEach(m => { database.cps[st.name][m][code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+    monthsList.forEach(m => {
+      if(!database.cps[st.name][m][code]) {
+        database.cps[st.name][m][code] = { target: 40, s1: 0, s2: 0, s3: 0, s4: 0 };
+      }
+    });
   });
   document.getElementById('indCpsCode').value = '';
   document.getElementById('indCpsLabel').value = '';
@@ -1076,7 +1279,9 @@ function removeIndCps(i) {
   let code = indicatorsCps[i].code;
   indicatorsCps.splice(i, 1);
   structures.forEach(st => {
-    monthsList.forEach(m => { delete database.cps[st.name][m][code]; });
+    monthsList.forEach(m => {
+      delete database.cps[st.name][m][code];
+    });
   });
   updateAll();
 }
@@ -1084,10 +1289,14 @@ function removeIndCps(i) {
 function addIndAgent() {
   let code = document.getElementById('indAgentCode').value.trim().toUpperCase();
   let label = document.getElementById('indAgentLabel').value.trim();
-  if(!code || !label) return;
+  if(!code) return;
   indicatorsAgent.push({ code, label });
   agentsSaisieList.forEach(ag => {
-    monthsList.forEach(m => { database.agents[ag.name][m][code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 }; });
+    monthsList.forEach(m => {
+      if(!database.agents[ag.name][m][code]) {
+        database.agents[ag.name][m][code] = { target: 20, s1: 0, s2: 0, s3: 0, s4: 0 };
+      }
+    });
   });
   document.getElementById('indAgentCode').value = '';
   document.getElementById('indAgentLabel').value = '';
@@ -1098,35 +1307,19 @@ function removeIndAgent(i) {
   let code = indicatorsAgent[i].code;
   indicatorsAgent.splice(i, 1);
   agentsSaisieList.forEach(ag => {
-    monthsList.forEach(m => { delete database.agents[ag.name][m][code]; });
+    monthsList.forEach(m => {
+      delete database.agents[ag.name][m][code];
+    });
   });
   updateAll();
 }
 
 function exportExcel() {
-  let csv = "\uFEFFIndicateur;Cible;Realise;Ecart;Taux\n";
-  let rows = document.querySelectorAll('#dashTableBody tr, #dashAgentTableBody tr');
-  rows.forEach(r => {
-    let cols = r.querySelectorAll('td');
-    if(cols.length >= 5) {
-      let ind = cols[0].innerText.replace(/\n/g, ' - ');
-      let target = cols[1].innerText;
-      let real = cols[2].innerText;
-      let gap = cols[3].innerText;
-      let rate = cols[4].innerText;
-      csv += `"${ind}";"${target}";"${real}";"${gap}";"${rate}"\n`;
-    }
-  });
-
-  let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  let url = URL.createObjectURL(blob);
-  let a = document.createElement('a');
-  a.href = url;
-  a.download = `Rapport_Consolide_DJIGUI_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  alert("Fonctionnalité d'export Excel à implémenter avec une bibliothèque comme SheetJS ou TableExport.");
 }
 
-window.onload = () => { toggleTimeSelectors(); populateAuthDropdowns(); updateAll(); };
+// Initialisation au chargement de la page
+initDB();
 </script>
 </body>
 </html>
