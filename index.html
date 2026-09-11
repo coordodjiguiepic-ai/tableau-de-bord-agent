@@ -147,9 +147,15 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 <div class="card" id="saisieCard" style="opacity:0.4; pointer-events:none;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
     <h2 id="saisieCardTitle">Saisie Hebdomadaire des Réalisations</h2>
-    <div>
-      <label class="muted">Mois de saisie :</label>
-      <select id="entryMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div>
+        <label class="muted">Mois de saisie :</label>
+        <select id="entryMonthSelect" onchange="updateAll()" style="font-weight:bold;"></select>
+      </div>
+      <!-- BOUTON SAUVAGE POUR SAUVEGARDER LES DONNEES -->
+      <div>
+        <button class="btn primary" onclick="sauvegardeSauvage()" style="background:#104d39; font-weight:bold; margin-top:16px;">💾 Sauvegarder dans Sheet</button>
+      </div>
     </div>
   </div>
   <div id="lockNotice" class="notice" style="display:none; background:#fdecea; border-color:#c23b32; color:#c23b32;"><b>Période verrouillée :</b> L'administrateur a verrouillé ce mois. La modification des données est désactivée.</div>
@@ -323,11 +329,12 @@ input.editable-input{width:65px;padding:4px;text-align:center}
 </div>
 
 <script>
+// URL Google Apps Script intégrée
 const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzPg4k-e2V-4_IkNdbjBYsPpjegLIL5f3wVJ0ewuAw9FaTkXFozbtKLSt1PA0aVPrkjiQ/exec';
 
 // Identifiants Administrateurs autorisés
 const ADMIN_CREDENTIALS = [
-  { name: "coordodjiguiepic", pass: "DJIGUI2001@" } // Modifiez ou dupliquez ici si besoin d'autres administrateurs
+  { name: "coordodjiguiepic", pass: "DJIGUI2001@" }
 ];
 
 let isAdminAuthenticated = false;
@@ -357,6 +364,55 @@ function syncWithGoogleSheet(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   }).catch(err => console.error('Erreur de synchronisation Google Sheets:', err));
+}
+
+// Fonction du bouton sauvage pour forcer l'envoi de toutes les lignes visibles ou de la saisie active vers le Sheet
+function sauvegardeSauvage() {
+  let authRole = document.getElementById('authRole').value;
+  let authSite = document.getElementById('authSite').value;
+  let authAgent = document.getElementById('authAgent').value;
+  let entryMonth = document.getElementById('entryMonthSelect').value;
+
+  if(!authSite || !authAgent) {
+    alert("Veuillez d'abord sélectionner votre rôle, site et nom pour sauvegarder.");
+    return;
+  }
+
+  if(authRole === 'CPS' && database.cps[authSite] && database.cps[authSite][entryMonth]) {
+    let cData = database.cps[authSite][entryMonth];
+    for(let code in cData) {
+      let d = cData[code];
+      ['s1', 's2', 's3', 's4'].forEach(wk => {
+        syncWithGoogleSheet({
+          type: 'CPS (Sauvegarde manuelle)',
+          entity: authSite,
+          month: entryMonth,
+          indicator: code,
+          semaine: wk,
+          valeur: d[wk],
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    alert("Données CPS synchronisées avec succès vers Google Sheets !");
+  } else if(authRole === 'ASD' && database.agents[authAgent] && database.agents[authAgent][entryMonth]) {
+    let agData = database.agents[authAgent][entryMonth];
+    for(let code in agData) {
+      let d = agData[code];
+      ['s1', 's2', 's3', 's4'].forEach(wk => {
+        syncWithGoogleSheet({
+          type: 'ASD (Sauvegarde manuelle)',
+          entity: authAgent,
+          month: entryMonth,
+          indicator: code,
+          semaine: wk,
+          valeur: d[wk],
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    alert("Données Agent de Saisie synchronisées avec succès vers Google Sheets !");
+  }
 }
 
 let structures = [
